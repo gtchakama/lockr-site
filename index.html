@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lockr - Local-First Secrets CLI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: '#0B0F14',
+                        secondary: '#1F2937',
+                        interactive: '#3B82F6',
+                        success: '#22C55E',
+                        danger: '#EF4444',
+                        muted: '#9CA3AF',
+                        light: '#F9FAFB'
+                    },
+                    fontFamily: {
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #0B0F14; color: #F9FAFB; }
+        .cli-window {
+            background-color: #1F2937;
+            border-radius: 0.5rem;
+            border: 1px solid #374151;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+        .cli-header {
+            background-color: #111827;
+            padding: 0.5rem 1rem;
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 1px solid #374151;
+        }
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dot.red { background-color: #EF4444; }
+        .dot.yellow { background-color: #F59E0B; }
+        .dot.green { background-color: #22C55E; }
+    </style>
+</head>
+<body class="font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Hero Section -->
+    <header class="container mx-auto px-6 py-20 text-center max-w-4xl mt-10">
+        <h1 class="text-5xl md:text-6xl font-bold tracking-tight mb-6">
+            Lock your API keys.<br>
+            <span class="text-interactive">Keep them local.</span>
+        </h1>
+        <p class="text-xl text-muted mb-10">
+            Fast, secure CLI for managing secrets without the cloud.
+        </p>
+        <div class="flex justify-center gap-4">
+            <a href="#install" class="bg-interactive hover:bg-blue-600 text-light font-semibold py-3 px-6 rounded-lg transition-colors">
+                Get Started
+            </a>
+            <a href="https://github.com/gtchakama/lockr" target="_blank" class="bg-secondary hover:bg-gray-700 text-light font-semibold py-3 px-6 rounded-lg transition-colors border border-gray-600">
+                View on GitHub
+            </a>
+        </div>
+    </header>
+
+    <!-- CLI Demo -->
+    <section class="container mx-auto px-6 py-12 max-w-3xl">
+        <div class="cli-window">
+            <div class="cli-header">
+                <div class="dot red"></div>
+                <div class="dot yellow"></div>
+                <div class="dot green"></div>
+            </div>
+            <div class="p-6 font-mono text-sm leading-relaxed overflow-x-auto">
+                <p class="text-muted"><span class="text-success">➜</span> <span class="text-light">~</span> lockr set stripe_key sk_test_123</p>
+                <p class="text-muted mb-4">Successfully saved 'stripe_key' to group 'default'</p>
+                
+                <p class="text-muted"><span class="text-success">➜</span> <span class="text-light">~</span> lockr get stripe_key</p>
+                <p class="text-interactive mb-4">sk_test_123</p>
+
+                <p class="text-muted"><span class="text-success">➜</span> <span class="text-light">~</span> lockr export default</p>
+                <p class="text-interactive">STRIPE_KEY=sk_test_123</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="container mx-auto px-6 py-20 max-w-5xl">
+        <h2 class="text-3xl font-bold text-center mb-12">Designed for Developers</h2>
+        <div class="grid md:grid-cols-2 gap-8">
+            <div class="bg-secondary p-8 rounded-xl border border-gray-800">
+                <h3 class="text-xl font-semibold mb-3 text-interactive">Local-First Storage</h3>
+                <p class="text-muted">All secrets are stored directly on your machine. No cloud sync, no accounts, zero external dependencies.</p>
+            </div>
+            <div class="bg-secondary p-8 rounded-xl border border-gray-800">
+                <h3 class="text-xl font-semibold mb-3 text-interactive">Encryption by Default</h3>
+                <p class="text-muted">Secured with AES-256-GCM encryption and Argon2id key derivation. Your master password never leaves your memory.</p>
+            </div>
+            <div class="bg-secondary p-8 rounded-xl border border-gray-800">
+                <h3 class="text-xl font-semibold mb-3 text-interactive">Group-based Organization</h3>
+                <p class="text-muted">Namespace your secrets cleanly using slashes (e.g., <code>work/aws_key</code>) to keep personal and professional credentials separated.</p>
+            </div>
+            <div class="bg-secondary p-8 rounded-xl border border-gray-800">
+                <h3 class="text-xl font-semibold mb-3 text-interactive">Environment Variable Export</h3>
+                <p class="text-muted">Instantly pipe your secrets directly into your shell or local dev environment without copying and pasting.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Installation -->
+    <section id="install" class="container mx-auto px-6 py-20 max-w-3xl text-center">
+        <h2 class="text-3xl font-bold mb-8">Installation</h2>
+        <div class="bg-secondary p-6 rounded-lg inline-block border border-gray-700 text-left">
+            <p class="font-mono text-sm mb-2 text-muted"># Install via Homebrew</p>
+            <code class="font-mono text-interactive text-lg">brew install gtchakama/tap/lockr</code>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="mt-auto border-t border-gray-800 py-8">
+        <div class="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center text-sm text-muted">
+            <p>&copy; 2026 Lockr. Built for developers.</p>
+            <div class="flex gap-6 mt-4 md:mt-0">
+                <a href="https://github.com/gtchakama/lockr" class="hover:text-light transition-colors">GitHub Repo</a>
+                <a href="https://github.com/gtchakama/lockr/blob/master/README.md" class="hover:text-light transition-colors">Documentation</a>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>
