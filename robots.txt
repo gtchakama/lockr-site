@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://lockr.dev/sitemap.xml
+Sitemap: https://lockr.gtchakama.com/sitemap.xml
