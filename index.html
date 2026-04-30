@@ -3,23 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lockr - Local-First Secrets CLI</title>
+    <title>Lockr — Local-first secrets, encrypted on your machine</title>
+    <meta name="description" content="A fast, local-first CLI for storing API keys and secrets. AES-256-GCM, Argon2id, OS keychain integration. No cloud, no accounts.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        background: '#0B0F14',
-                        secondary: '#1F2937',
-                        interactive: '#3B82F6',
-                        success: '#22C55E',
-                        danger: '#EF4444',
-                        muted: '#9CA3AF',
-                        light: '#F9FAFB'
+                        ink: '#0B1220',
+                        slate: {
+                            50: '#F8FAFC',
+                            100: '#F1F5F9',
+                            200: '#E2E8F0',
+                            300: '#CBD5E1',
+                            400: '#94A3B8',
+                            500: '#64748B',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1E293B',
+                            900: '#0F172A'
+                        },
+                        brand: {
+                            DEFAULT: '#B23A2D',
+                            light: '#C9483A',
+                            deep: '#8B2A20',
+                            soft: '#FBEAE7'
+                        },
+                        accent: '#8B2A20',
+                        ok: '#10B981',
+                        warn: '#F59E0B'
                     },
                     fontFamily: {
-                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
                         sans: ['Inter', 'system-ui', 'sans-serif'],
                     }
                 }
@@ -27,111 +48,1072 @@
         }
     </script>
     <style>
-        body { background-color: #0B0F14; color: #F9FAFB; }
-        .cli-window {
-            background-color: #1F2937;
-            border-radius: 0.5rem;
-            border: 1px solid #374151;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+        html { scroll-behavior: smooth; }
+        body {
+            background-color: #FFFFFF;
+            color: #0F172A;
+            font-feature-settings: "cv11", "ss01", "ss03";
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Decorative grid background */
+        .grid-bg {
+            background-image:
+                linear-gradient(to right, rgba(15,23,42,0.045) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(15,23,42,0.045) 1px, transparent 1px);
+            background-size: 56px 56px;
+            -webkit-mask-image: radial-gradient(ellipse at top, black 35%, transparent 75%);
+                    mask-image: radial-gradient(ellipse at top, black 35%, transparent 75%);
+        }
+
+        /* Soft accent glows — warm, low saturation */
+        .glow-a, .glow-b {
+            position: absolute;
+            border-radius: 9999px;
+            filter: blur(90px);
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.45;
+        }
+        .glow-a { background: radial-gradient(circle, #F4CAC2 0%, transparent 70%); }
+        .glow-b { background: radial-gradient(circle, #F8DDD6 0%, transparent 70%); }
+
+        /* Headline accent — solid brick, not a gradient */
+        .gradient-text {
+            color: #B23A2D;
+        }
+
+        /* Terminal window */
+        .terminal {
+            background: #0B1220;
+            color: #E2E8F0;
+            border-radius: 16px;
+            box-shadow:
+                0 1px 0 rgba(255,255,255,0.5) inset,
+                0 30px 60px -20px rgba(15,23,42,0.35),
+                0 18px 35px -18px rgba(178,58,45,0.22);
             overflow: hidden;
+            border: 1px solid rgba(15,23,42,0.08);
         }
-        .cli-header {
-            background-color: #111827;
-            padding: 0.5rem 1rem;
+        .terminal-header {
             display: flex;
-            gap: 0.5rem;
-            border-bottom: 1px solid #374151;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: linear-gradient(180deg, #111A2E 0%, #0B1220 100%);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
         }
-        .dot { width: 12px; height: 12px; border-radius: 50%; }
-        .dot.red { background-color: #EF4444; }
-        .dot.yellow { background-color: #F59E0B; }
-        .dot.green { background-color: #22C55E; }
+        .terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dot-r { background: #FF5F56; box-shadow: 0 0 0 1px rgba(0,0,0,0.15) inset; }
+        .dot-y { background: #FFBD2E; box-shadow: 0 0 0 1px rgba(0,0,0,0.15) inset; }
+        .dot-g { background: #27C93F; box-shadow: 0 0 0 1px rgba(0,0,0,0.15) inset; }
+        .terminal-title {
+            margin-left: auto;
+            margin-right: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: #94A3B8;
+            letter-spacing: 0.02em;
+        }
+        .terminal-body {
+            padding: 22px 24px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13.5px;
+            line-height: 1.75;
+            white-space: pre;
+            overflow-x: auto;
+        }
+        .tok-prompt   { color: #34D399; }
+        .tok-path     { color: #93C5FD; }
+        .tok-cmd      { color: #FFFFFF; font-weight: 500; }
+        .tok-flag     { color: #F472B6; }
+        .tok-arg      { color: #FCD34D; }
+        .tok-string   { color: #A5F3FC; }
+        .tok-comment  { color: #64748B; font-style: italic; }
+        .tok-ok       { color: #34D399; }
+        .tok-warn     { color: #FBBF24; }
+        .tok-key      { color: #C4B5FD; }
+        .tok-dim      { color: #94A3B8; }
+
+        /* Caret/typing cursor */
+        .caret::after {
+            content: '▍';
+            display: inline-block;
+            color: #34D399;
+            animation: blink 1.05s steps(1) infinite;
+            margin-left: 2px;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* Floating chips around hero terminal */
+        .chip {
+            position: absolute;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: white;
+            border: 1px solid rgba(15,23,42,0.08);
+            box-shadow: 0 12px 30px -12px rgba(15,23,42,0.18);
+            font-size: 13px;
+            color: #334155;
+            font-weight: 500;
+            white-space: nowrap;
+            backdrop-filter: blur(6px);
+        }
+        .chip .swatch { width: 8px; height: 8px; border-radius: 50%; }
+
+        /* Cards */
+        .card {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 16px;
+            transition: transform .35s ease, box-shadow .35s ease, border-color .35s ease;
+        }
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 20px 40px -22px rgba(15,23,42,0.18);
+            border-color: #E8B7AE;
+        }
+
+        /* Tab buttons */
+        .tab-btn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12.5px;
+            color: #64748B;
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            transition: all .2s ease;
+            cursor: pointer;
+            background: transparent;
+        }
+        .tab-btn:hover { color: #1E293B; background: #F1F5F9; }
+        .tab-btn.active {
+            color: #0F172A;
+            background: white;
+            border-color: #E2E8F0;
+            box-shadow: 0 6px 14px -8px rgba(15,23,42,0.18);
+        }
+
+        /* Subtle pill */
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            font-size: 12.5px;
+            font-weight: 500;
+            color: #8B2A20;
+            background: #FBEAE7;
+            border: 1px solid #F2CCC4;
+            border-radius: 999px;
+        }
+        .pill .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #B23A2D;
+            box-shadow: 0 0 0 4px rgba(178,58,45,0.18);
+        }
+
+        /* Ascii diagram */
+        .ascii {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            line-height: 1.7;
+            color: #475569;
+            white-space: pre;
+        }
+
+        /* Reveal-on-scroll initial state */
+        .reveal { opacity: 0; transform: translateY(24px); }
+        .stagger > * { opacity: 0; transform: translateY(16px); }
+
+        /* Marquee */
+        .marquee {
+            display: flex;
+            gap: 56px;
+            animation: scroll 35s linear infinite;
+            width: max-content;
+        }
+        @keyframes scroll {
+            from { transform: translateX(0); }
+            to   { transform: translateX(-50%); }
+        }
+
+        /* Inline code snippet block (light) */
+        .code-light {
+            background: #0B1220;
+            color: #E2E8F0;
+            border-radius: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            padding: 16px 18px;
+            line-height: 1.7;
+            overflow-x: auto;
+            border: 1px solid rgba(15,23,42,0.08);
+        }
+
+        /* Nav blur on scroll */
+        .nav {
+            transition: background-color .2s ease, border-color .2s ease, backdrop-filter .2s ease;
+        }
+        .nav.scrolled {
+            background-color: rgba(255,255,255,0.78);
+            backdrop-filter: saturate(180%) blur(12px);
+            border-bottom-color: rgba(15,23,42,0.06);
+        }
+
+        /* Custom button — solid brick */
+        .btn-primary {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #B23A2D;
+            color: white;
+            font-weight: 600;
+            padding: 13px 22px;
+            border-radius: 12px;
+            transition: transform .15s ease, box-shadow .25s ease, background-color .2s ease;
+            box-shadow: 0 12px 28px -10px rgba(178,58,45,0.5);
+        }
+        .btn-primary:hover {
+            background: #8B2A20;
+            transform: translateY(-1px);
+            box-shadow: 0 18px 36px -12px rgba(178,58,45,0.6);
+        }
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            color: #0F172A;
+            font-weight: 600;
+            padding: 13px 22px;
+            border-radius: 12px;
+            border: 1px solid #E2E8F0;
+            transition: border-color .2s ease, transform .15s ease;
+        }
+        .btn-secondary:hover { border-color: #CBD5E1; transform: translateY(-1px); }
+
+        /* Highlight underline */
+        .underline-grad {
+            position: relative;
+            display: inline-block;
+        }
+        .underline-grad::after {
+            content: '';
+            position: absolute;
+            left: 0; right: 0; bottom: -4px;
+            height: 8px;
+            border-radius: 999px;
+            background: #F2CCC4;
+            transform: scaleX(0);
+            transform-origin: left;
+            opacity: 0.9;
+        }
+
+        /* Section heading */
+        .section-eyebrow {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: #B23A2D;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+        }
+
+        /* Star/badge icons */
+        .icon-bg {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: #FBEAE7;
+            border: 1px solid #F2CCC4;
+            color: #B23A2D;
+        }
+
+        /* Sticky tabs container */
+        .tab-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 6px;
+            background: #F1F5F9;
+            border-radius: 12px;
+            border: 1px solid #E2E8F0;
+        }
+
+        @media (max-width: 768px) {
+            .terminal-body { font-size: 12.5px; }
+        }
     </style>
 </head>
-<body class="font-sans antialiased min-h-screen flex flex-col">
+<body class="font-sans">
 
-    <!-- Hero Section -->
-    <header class="container mx-auto px-6 py-20 text-center max-w-4xl mt-10">
-        <h1 class="text-5xl md:text-6xl font-bold tracking-tight mb-6">
-            Lock your API keys.<br>
-            <span class="text-interactive">Keep them local.</span>
-        </h1>
-        <p class="text-xl text-muted mb-10">
-            Fast, secure CLI for managing secrets without the cloud.
-        </p>
-        <div class="flex justify-center gap-4">
-            <a href="#install" class="bg-interactive hover:bg-blue-600 text-light font-semibold py-3 px-6 rounded-lg transition-colors">
-                Get Started
+<!-- NAV -->
+<nav id="nav" class="nav fixed top-0 inset-x-0 z-50 border-b border-transparent">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        <a href="#" class="flex items-center gap-2.5">
+            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-ink text-white font-mono text-sm font-bold">L</span>
+            <span class="font-semibold tracking-tight">lockr</span>
+            <span class="hidden sm:inline pill" style="padding:4px 10px;font-size:11px"><span class="dot"></span><span id="js-version-pill">v1.0.0</span></span>
+        </a>
+        <div class="hidden md:flex items-center gap-8 text-sm text-slate-600">
+            <a href="#features" class="hover:text-ink transition-colors">Features</a>
+            <a href="#commands" class="hover:text-ink transition-colors">Commands</a>
+            <a href="#security" class="hover:text-ink transition-colors">Security</a>
+            <a href="#install" class="hover:text-ink transition-colors">Install</a>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="https://github.com/gtchakama/lockr" target="_blank" rel="noopener" class="hidden sm:inline-flex items-center gap-2 text-sm text-slate-600 hover:text-ink">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-2.13c-3.2.69-3.87-1.54-3.87-1.54-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.69 1.24 3.35.95.1-.74.4-1.24.72-1.53-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.18-3.09-.12-.29-.51-1.46.11-3.05 0 0 .96-.31 3.15 1.18a10.94 10.94 0 0 1 5.74 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.59.23 2.76.11 3.05.74.8 1.18 1.83 1.18 3.09 0 4.42-2.69 5.4-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.55A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/></svg>
+                <span>GitHub</span>
             </a>
-            <a href="https://github.com/gtchakama/lockr" target="_blank" class="bg-secondary hover:bg-gray-700 text-light font-semibold py-3 px-6 rounded-lg transition-colors border border-gray-600">
-                View on GitHub
-            </a>
+            <a href="#install" class="btn-primary text-sm" style="padding:9px 16px">Install</a>
         </div>
-    </header>
+    </div>
+</nav>
 
-    <!-- CLI Demo -->
-    <section class="container mx-auto px-6 py-12 max-w-3xl">
-        <div class="cli-window">
-            <div class="cli-header">
-                <div class="dot red"></div>
-                <div class="dot yellow"></div>
-                <div class="dot green"></div>
-            </div>
-            <div class="p-6 font-mono text-sm leading-relaxed overflow-x-auto">
-                <p class="text-muted"><span class="text-success">➜</span> <span class="text-light">~</span> lockr set stripe_key sk_test_123</p>
-                <p class="text-muted mb-4">Successfully saved 'stripe_key' to group 'default'</p>
-                
-                <p class="text-muted"><span class="text-success">➜</span> <span class="text-light">~</span> lockr get stripe_key</p>
-                <p class="text-interactive mb-4">sk_test_123</p>
+<!-- HERO -->
+<section class="relative pt-28 pb-24 overflow-hidden">
+    <div class="absolute inset-0 grid-bg pointer-events-none"></div>
+    <div class="glow-a" style="width:540px;height:540px;top:-120px;left:-120px;"></div>
+    <div class="glow-b" style="width:520px;height:520px;top:120px;right:-160px;"></div>
 
-                <p class="text-muted"><span class="text-success">➜</span> <span class="text-light">~</span> lockr export default</p>
-                <p class="text-interactive">STRIPE_KEY=sk_test_123</p>
+    <div class="max-w-6xl mx-auto px-6 relative">
+        <div class="text-center max-w-3xl mx-auto">
+            <span id="hero-pill" class="pill reveal">
+                <span class="dot"></span>
+                Local-first · No cloud · Built in Go
+            </span>
+            <h1 id="hero-title" class="mt-6 text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.05]">
+                <span class="block">Lock your secrets.</span>
+                <span class="block">Keep them <span class="gradient-text underline-grad" id="hero-keyword">on your machine.</span></span>
+            </h1>
+            <p id="hero-sub" class="mt-7 text-lg md:text-xl text-slate-600 leading-relaxed reveal">
+                A fast CLI for storing API keys and credentials with <span class="font-semibold text-ink">AES-256-GCM</span> encryption,
+                <span class="font-semibold text-ink">Argon2id</span> key derivation, and OS-keychain caching. No accounts, no sync, no servers.
+            </p>
+            <div id="hero-ctas" class="mt-10 flex flex-wrap items-center justify-center gap-3 reveal">
+                <a href="#install" class="btn-primary">
+                    Install in 30 seconds
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+                </a>
+                <a href="https://github.com/gtchakama/lockr" target="_blank" rel="noopener" class="btn-secondary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-2.13c-3.2.69-3.87-1.54-3.87-1.54-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.69 1.24 3.35.95.1-.74.4-1.24.72-1.53-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.18-3.09-.12-.29-.51-1.46.11-3.05 0 0 .96-.31 3.15 1.18a10.94 10.94 0 0 1 5.74 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.59.23 2.76.11 3.05.74.8 1.18 1.83 1.18 3.09 0 4.42-2.69 5.4-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.55A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/></svg>
+                    Star on GitHub
+                </a>
             </div>
-        </div>
-    </section>
-
-    <!-- Features Section -->
-    <section class="container mx-auto px-6 py-20 max-w-5xl">
-        <h2 class="text-3xl font-bold text-center mb-12">Designed for Developers</h2>
-        <div class="grid md:grid-cols-2 gap-8">
-            <div class="bg-secondary p-8 rounded-xl border border-gray-800">
-                <h3 class="text-xl font-semibold mb-3 text-interactive">Local-First Storage</h3>
-                <p class="text-muted">All secrets are stored directly on your machine. No cloud sync, no accounts, zero external dependencies.</p>
-            </div>
-            <div class="bg-secondary p-8 rounded-xl border border-gray-800">
-                <h3 class="text-xl font-semibold mb-3 text-interactive">Encryption by Default</h3>
-                <p class="text-muted">Secured with AES-256-GCM encryption and Argon2id key derivation. Your master password never leaves your memory.</p>
-            </div>
-            <div class="bg-secondary p-8 rounded-xl border border-gray-800">
-                <h3 class="text-xl font-semibold mb-3 text-interactive">Group-based Organization</h3>
-                <p class="text-muted">Namespace your secrets cleanly using slashes (e.g., <code>work/aws_key</code>) to keep personal and professional credentials separated.</p>
-            </div>
-            <div class="bg-secondary p-8 rounded-xl border border-gray-800">
-                <h3 class="text-xl font-semibold mb-3 text-interactive">Environment Variable Export</h3>
-                <p class="text-muted">Instantly pipe your secrets directly into your shell or local dev environment without copying and pasting.</p>
+            <div id="hero-meta" class="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-slate-500 font-mono reveal">
+                <span>~/.lockr/vault.enc</span>
+                <span class="text-slate-300">•</span>
+                <span>macOS · Linux · Windows</span>
+                <span class="text-slate-300">•</span>
+                <span>MIT License</span>
             </div>
         </div>
-    </section>
 
-    <!-- Installation -->
-    <section id="install" class="container mx-auto px-6 py-20 max-w-3xl text-center">
-        <h2 class="text-3xl font-bold mb-8">Installation</h2>
-        <div class="bg-secondary p-6 rounded-lg inline-block border border-gray-700 text-left">
-            <p class="font-mono text-sm mb-2 text-muted"># Install via Homebrew</p>
-            <code class="font-mono text-interactive text-lg">brew install gtchakama/tap/lockr</code>
-        </div>
-    </section>
+        <!-- HERO TERMINAL -->
+        <div id="hero-terminal-wrap" class="relative mt-16 max-w-3xl mx-auto reveal">
+            <div class="chip" style="top:-18px; left:-26px; transform:rotate(-3deg)">
+                <span class="swatch" style="background:#10B981"></span>
+                AES-256-GCM
+            </div>
+            <div class="chip hidden md:inline-flex" style="top:60px; right:-40px; transform:rotate(2deg)">
+                <span class="swatch" style="background:#B23A2D"></span>
+                Argon2id KDF
+            </div>
+            <div class="chip hidden md:inline-flex" style="bottom:-22px; left:30px; transform:rotate(2deg)">
+                <span class="swatch" style="background:#F59E0B"></span>
+                OS Keychain cached
+            </div>
 
-    <!-- Footer -->
-    <footer class="mt-auto border-t border-gray-800 py-8">
-        <div class="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center text-sm text-muted">
-            <p>&copy; 2026 Lockr. Built for developers.</p>
-            <div class="flex gap-6 mt-4 md:mt-0">
-                <a href="https://github.com/gtchakama/lockr" class="hover:text-light transition-colors">GitHub Repo</a>
-                <a href="https://github.com/gtchakama/lockr/blob/master/README.md" class="hover:text-light transition-colors">Documentation</a>
+            <div class="terminal">
+                <div class="terminal-header">
+                    <span class="terminal-dot dot-r"></span>
+                    <span class="terminal-dot dot-y"></span>
+                    <span class="terminal-dot dot-g"></span>
+                    <span class="terminal-title">~ — lockr</span>
+                </div>
+                <div id="hero-terminal" class="terminal-body" aria-live="polite"></div>
             </div>
         </div>
-    </footer>
+    </div>
+</section>
+
+<!-- SOCIAL / TECH ROW -->
+<section class="border-y border-slate-200/70 py-8 overflow-hidden bg-slate-50/60">
+    <div class="max-w-6xl mx-auto px-6">
+        <p class="text-center text-xs font-mono uppercase tracking-[0.2em] text-slate-500 mb-6">Built with proven primitives</p>
+        <div class="overflow-hidden">
+            <div class="marquee text-slate-500 text-sm font-medium whitespace-nowrap">
+                <span>Go · Cobra</span><span>AES-256-GCM</span><span>Argon2id</span><span>macOS Keychain</span><span>Secret Service (Linux)</span><span>Windows Credential Manager</span><span>Local-first</span><span>Zero Network I/O</span>
+                <span>Go · Cobra</span><span>AES-256-GCM</span><span>Argon2id</span><span>macOS Keychain</span><span>Secret Service (Linux)</span><span>Windows Credential Manager</span><span>Local-first</span><span>Zero Network I/O</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features" class="relative py-28">
+    <div class="max-w-6xl mx-auto px-6">
+        <div class="max-w-2xl reveal" data-reveal>
+            <span class="section-eyebrow">// features</span>
+            <h2 class="mt-3 text-4xl md:text-5xl font-bold tracking-tight">
+                Built like <span class="gradient-text">a paranoid sysadmin</span> <br class="hidden md:block">
+                would build it.
+            </h2>
+            <p class="mt-5 text-lg text-slate-600">
+                Lockr stays out of your way: a single binary, an encrypted file under your home directory, and shell-friendly output.
+            </p>
+        </div>
+
+        <div class="mt-14 grid md:grid-cols-2 lg:grid-cols-3 gap-6 stagger" data-stagger>
+            <div class="card p-7">
+                <div class="icon-bg">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4v6c0 5-3.5 8.5-9 10-5.5-1.5-9-5-9-10V7Z"/><path d="m9 12 2 2 4-4"/></svg>
+                </div>
+                <h3 class="mt-5 text-lg font-semibold">AES-256-GCM at rest</h3>
+                <p class="mt-2 text-slate-600 leading-relaxed">Authenticated encryption with a fresh nonce on every save. Tampering is detected, plaintext never touches disk.</p>
+            </div>
+            <div class="card p-7">
+                <div class="icon-bg">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                </div>
+                <h3 class="mt-5 text-lg font-semibold">Argon2id KDF</h3>
+                <p class="mt-2 text-slate-600 leading-relaxed">Memory-hard key derivation tuned to make brute-force attacks against your master password impractical.</p>
+            </div>
+            <div class="card p-7">
+                <div class="icon-bg">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <h3 class="mt-5 text-lg font-semibold">OS keychain caching</h3>
+                <p class="mt-2 text-slate-600 leading-relaxed">Master password is held in macOS Keychain, Secret Service, or Windows Credential Manager. Flush anytime with <code class="font-mono text-brand">lockr lock</code>.</p>
+            </div>
+            <div class="card p-7">
+                <div class="icon-bg">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18M3 12h18M3 17h12"/></svg>
+                </div>
+                <h3 class="mt-5 text-lg font-semibold">Group namespaces</h3>
+                <p class="mt-2 text-slate-600 leading-relaxed">Organize with <code class="font-mono text-brand">work/stripe_key</code>, <code class="font-mono text-brand">personal/github</code>. Export an entire group at once.</p>
+            </div>
+            <div class="card p-7">
+                <div class="icon-bg">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </div>
+                <h3 class="mt-5 text-lg font-semibold">Clipboard mode</h3>
+                <p class="mt-2 text-slate-600 leading-relaxed">Use <code class="font-mono text-brand">--copy</code> to put a secret straight on your clipboard — never prints, never shoulder-surfed.</p>
+            </div>
+            <div class="card p-7">
+                <div class="icon-bg">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                </div>
+                <h3 class="mt-5 text-lg font-semibold">Rotation reminders</h3>
+                <p class="mt-2 text-slate-600 leading-relaxed">Secrets older than 90 days are flagged in <code class="font-mono text-brand">lockr list</code> so stale credentials don't quietly outlive their welcome.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- COMMANDS / TABBED CODE -->
+<section id="commands" class="relative py-28 bg-slate-50/60 border-y border-slate-200/70">
+    <div class="max-w-6xl mx-auto px-6">
+        <div class="max-w-2xl reveal" data-reveal>
+            <span class="section-eyebrow">// commands</span>
+            <h2 class="mt-3 text-4xl md:text-5xl font-bold tracking-tight">
+                A handful of commands. <br class="hidden md:block">
+                <span class="gradient-text">That's it.</span>
+            </h2>
+            <p class="mt-5 text-lg text-slate-600">
+                Designed to feel like <code class="font-mono">git</code>: predictable, scriptable, fast.
+            </p>
+        </div>
+
+        <div class="mt-12 grid lg:grid-cols-[1fr_1.4fr] gap-8 items-start">
+            <!-- Tab list -->
+            <div class="reveal" data-reveal>
+                <div class="tab-list" role="tablist" aria-label="lockr commands">
+                    <button class="tab-btn active" data-tab="init">init</button>
+                    <button class="tab-btn" data-tab="set">set</button>
+                    <button class="tab-btn" data-tab="get">get</button>
+                    <button class="tab-btn" data-tab="list">list</button>
+                    <button class="tab-btn" data-tab="export">export</button>
+                    <button class="tab-btn" data-tab="delete">delete</button>
+                    <button class="tab-btn" data-tab="lock">lock</button>
+                </div>
+
+                <div class="mt-6 space-y-5">
+                    <div data-tab-meta="init">
+                        <h3 class="text-xl font-semibold">Initialize the vault</h3>
+                        <p class="mt-2 text-slate-600">Creates an encrypted vault at <code class="font-mono text-brand">~/.lockr/vault.enc</code>, derives your encryption key with Argon2id, and caches the master password in your OS keychain.</p>
+                    </div>
+                    <div data-tab-meta="set" hidden>
+                        <h3 class="text-xl font-semibold">Store a secret</h3>
+                        <p class="mt-2 text-slate-600">Use <code class="font-mono text-brand">group/key</code> syntax to namespace. Bare keys land in the <code class="font-mono text-brand">default</code> group.</p>
+                    </div>
+                    <div data-tab-meta="get" hidden>
+                        <h3 class="text-xl font-semibold">Retrieve a secret</h3>
+                        <p class="mt-2 text-slate-600">Print to stdout, or pass <code class="font-mono text-brand">--copy</code> / <code class="font-mono text-brand">-c</code> to send straight to the clipboard without echoing.</p>
+                    </div>
+                    <div data-tab-meta="list" hidden>
+                        <h3 class="text-xl font-semibold">List secrets</h3>
+                        <p class="mt-2 text-slate-600">Values are masked. Anything older than 90 days is annotated with a rotation hint.</p>
+                    </div>
+                    <div data-tab-meta="export" hidden>
+                        <h3 class="text-xl font-semibold">Export to env vars</h3>
+                        <p class="mt-2 text-slate-600">Wrap with <code class="font-mono text-brand">eval $(...)</code> to load secrets into the current shell. One key, or an entire group.</p>
+                    </div>
+                    <div data-tab-meta="delete" hidden>
+                        <h3 class="text-xl font-semibold">Delete a secret or group</h3>
+                        <p class="mt-2 text-slate-600">Single key by default. Pass <code class="font-mono text-brand">--group</code> / <code class="font-mono text-brand">-g</code> to drop the whole namespace.</p>
+                    </div>
+                    <div data-tab-meta="lock" hidden>
+                        <h3 class="text-xl font-semibold">Lock the vault</h3>
+                        <p class="mt-2 text-slate-600">Removes the cached master password from the OS keychain. Next call prompts you again.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab terminals -->
+            <div class="terminal reveal" data-reveal>
+                <div class="terminal-header">
+                    <span class="terminal-dot dot-r"></span>
+                    <span class="terminal-dot dot-y"></span>
+                    <span class="terminal-dot dot-g"></span>
+                    <span class="terminal-title" id="tab-title">~ — lockr init</span>
+                </div>
+
+                <div class="terminal-body" data-tab-pane="init"><span class="tok-prompt">➜</span> <span class="tok-path">~</span> <span class="tok-cmd">lockr</span> init
+<span class="tok-dim">Enter master password:</span> <span class="tok-dim">••••••••••••</span>
+<span class="tok-dim">Confirm master password:</span> <span class="tok-dim">••••••••••••</span>
+
+<span class="tok-ok">✓</span> Vault created at <span class="tok-string">~/.lockr/vault.enc</span>
+<span class="tok-ok">✓</span> Derived key with <span class="tok-key">Argon2id</span> (m=64MB, t=3, p=4)
+<span class="tok-ok">✓</span> Cached session in OS keychain
+
+<span class="tok-comment"># Run `lockr lock` any time to evict the cached password.</span></div>
+
+                <div class="terminal-body" hidden data-tab-pane="set"><span class="tok-prompt">➜</span> <span class="tok-path">~</span> <span class="tok-cmd">lockr</span> set <span class="tok-arg">work/stripe_key</span> <span class="tok-string">sk_live_RT7d9...x4</span>
+<span class="tok-ok">✓</span> Saved <span class="tok-key">stripe_key</span> to group <span class="tok-key">work</span>
+
+<span class="tok-prompt">➜</span> <span class="tok-path">~</span> <span class="tok-cmd">lockr</span> set <span class="tok-arg">github_token</span> <span class="tok-string">ghp_91afK...Lz</span>
+<span class="tok-ok">✓</span> Saved <span class="tok-key">github_token</span> to group <span class="tok-key">default</span>
+
+<span class="tok-comment"># No group prefix? Lands in `default`.</span></div>
+
+                <div class="terminal-body" hidden data-tab-pane="get"><span class="tok-prompt">➜</span> <span class="tok-path">~</span> <span class="tok-cmd">lockr</span> get <span class="tok-arg">work/stripe_key</span>
+<span class="tok-string">sk_live_RT7d9...x4</span>
+
+<span class="tok-prompt">➜</span> <span class="tok-path">~</span> <span class="tok-cmd">lockr</span> get <span class="tok-arg">work/stripe_key</span> <span class="tok-flag">--copy</span>
+<span class="tok-ok">✓</span> Copied to clipboard. Will not be printed.
+
+<span class="tok-prompt">➜</span> <span class="tok-path">~</span> <span class="tok-cmd">lockr</span> get <span class="tok-arg">work/stripe_key</span> <span class="tok-flag">-c</span>
+<span class="tok-ok">✓</span> Copied to clipboard.</div>
+
+                <div class="terminal-body" hidden data-tab-pane="list"><span class="tok-prompt">➜</span> <span class="tok-path">~</span> <span class="tok-cmd">lockr</span> list
+
+<span class="tok-key">work/</span>
+  stripe_key      <span class="tok-dim">••••••••••</span>   <span class="tok-dim">updated 4d ago</span>
+  aws_access_key  <span class="tok-dim">••••••••••</span>   <span class="tok-warn">⚠ 112 days old — consider rotation</span>
+
+<span class="tok-key">default/</span>
+  github_token    <span class="tok-dim">••••••••••</span>   <span class="tok-dim">updated 1h ago</span>
+  openai_key      <span class="tok-dim">••••••••••</span>   <span class="tok-dim">updated 18d ago</span>
+
+<span class="tok-prompt">➜</span> <span class="tok-path">~</span> <span class="tok-cmd">lockr</span> list <span class="tok-arg">work</span>
+<span class="tok-key">work/</span>
+  stripe_key      <span class="tok-dim">••••••••••</span>   <span class="tok-dim">updated 4d ago</span></div>
+
+                <div class="terminal-body" hidden data-tab-pane="export"><span class="tok-prompt">➜</span> <span class="tok-path">~</span> <span class="tok-cmd">eval</span> $(<span class="tok-cmd">lockr</span> export <span class="tok-arg">work</span>)
+
+<span class="tok-prompt">➜</span> <span class="tok-path">~</span> <span class="tok-cmd">env</span> | <span class="tok-cmd">grep</span> _KEY
+<span class="tok-key">STRIPE_KEY</span>=<span class="tok-string">sk_live_RT7d9...x4</span>
+<span class="tok-key">AWS_ACCESS_KEY</span>=<span class="tok-string">AKIA...QY</span>
+
+<span class="tok-comment"># Single secret as a one-liner:</span>
+<span class="tok-prompt">➜</span> <span class="tok-path">~</span> <span class="tok-cmd">eval</span> $(<span class="tok-cmd">lockr</span> export <span class="tok-arg">work/stripe_key</span>)</div>
+
+                <div class="terminal-body" hidden data-tab-pane="delete"><span class="tok-prompt">➜</span> <span class="tok-path">~</span> <span class="tok-cmd">lockr</span> delete <span class="tok-arg">work/stripe_key</span>
+<span class="tok-ok">✓</span> Removed <span class="tok-key">stripe_key</span> from group <span class="tok-key">work</span>
+
+<span class="tok-prompt">➜</span> <span class="tok-path">~</span> <span class="tok-cmd">lockr</span> delete <span class="tok-flag">--group</span> <span class="tok-arg">work</span>
+<span class="tok-warn">!</span> Drop entire group <span class="tok-key">work</span> (2 secrets)? [y/N] y
+<span class="tok-ok">✓</span> Group removed.</div>
+
+                <div class="terminal-body" hidden data-tab-pane="lock"><span class="tok-prompt">➜</span> <span class="tok-path">~</span> <span class="tok-cmd">lockr</span> lock
+<span class="tok-ok">✓</span> Master password evicted from OS keychain.
+
+<span class="tok-prompt">➜</span> <span class="tok-path">~</span> <span class="tok-cmd">lockr</span> get <span class="tok-arg">github_token</span>
+<span class="tok-dim">Enter master password:</span> <span class="tok-dim">••••••••••••</span>
+<span class="tok-string">ghp_91afK...Lz</span></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SECURITY -->
+<section id="security" class="relative py-28">
+    <div class="max-w-6xl mx-auto px-6 grid lg:grid-cols-2 gap-14 items-center">
+        <div class="reveal" data-reveal>
+            <span class="section-eyebrow">// security model</span>
+            <h2 class="mt-3 text-4xl md:text-5xl font-bold tracking-tight">
+                Your master password<br>
+                <span class="gradient-text">never leaves memory.</span>
+            </h2>
+            <p class="mt-5 text-lg text-slate-600 leading-relaxed">
+                Lockr derives an encryption key from your password with Argon2id, encrypts your vault with AES-256-GCM, and writes a fresh nonce on every save. Vault metadata is authenticated — silent tampering is impossible.
+            </p>
+
+            <ul class="mt-8 space-y-3">
+                <li class="flex gap-3"><span class="mt-1 text-brand">▸</span><span><strong>Zero network I/O.</strong> Lockr makes no outbound requests. Your secrets stay on disk.</span></li>
+                <li class="flex gap-3"><span class="mt-1 text-brand">▸</span><span><strong>Argon2id (memory-hard).</strong> Resists GPU/ASIC brute-force attacks against your master password.</span></li>
+                <li class="flex gap-3"><span class="mt-1 text-brand">▸</span><span><strong>Authenticated encryption.</strong> AES-256-GCM detects any modification to the vault file.</span></li>
+                <li class="flex gap-3"><span class="mt-1 text-brand">▸</span><span><strong>OS-native keychain.</strong> Session caching uses Keychain / Secret Service / Credential Manager.</span></li>
+            </ul>
+
+            <div class="mt-8 ascii hidden md:block">
+┌──────────────┐    Argon2id    ┌──────────────┐    AES-256-GCM    ┌──────────────────┐
+│  master pw   │ ─────────────▶ │ encryption   │ ────────────────▶ │  vault.enc       │
+│  (memory)    │                │ key (32B)    │                   │  (on disk)       │
+└──────────────┘                └──────────────┘                   └──────────────────┘
+        │                                                                   ▲
+        │  cached in OS keychain (until `lockr lock`)                       │
+        ▼                                                                   │
+┌──────────────────────────────────────────────────────────────────────────┘
+            </div>
+        </div>
+
+        <div class="reveal" data-reveal>
+            <div class="terminal">
+                <div class="terminal-header">
+                    <span class="terminal-dot dot-r"></span>
+                    <span class="terminal-dot dot-y"></span>
+                    <span class="terminal-dot dot-g"></span>
+                    <span class="terminal-title">internal/crypto/encrypt.go</span>
+                </div>
+                <div class="terminal-body"><span class="tok-key">package</span> crypto
+
+<span class="tok-key">import</span> (
+    <span class="tok-string">"crypto/aes"</span>
+    <span class="tok-string">"crypto/cipher"</span>
+    <span class="tok-string">"crypto/rand"</span>
+
+    <span class="tok-string">"golang.org/x/crypto/argon2"</span>
+)
+
+<span class="tok-comment">// DeriveKey turns a master password into a 32-byte AES key
+// using Argon2id with memory-hard parameters.</span>
+<span class="tok-key">func</span> <span class="tok-cmd">DeriveKey</span>(pw, salt []<span class="tok-key">byte</span>) []<span class="tok-key">byte</span> {
+    <span class="tok-key">return</span> argon2.<span class="tok-cmd">IDKey</span>(pw, salt, <span class="tok-arg">3</span>, <span class="tok-arg">64</span>*<span class="tok-arg">1024</span>, <span class="tok-arg">4</span>, <span class="tok-arg">32</span>)
+}
+
+<span class="tok-comment">// Encrypt seals plaintext with AES-256-GCM and a fresh nonce.</span>
+<span class="tok-key">func</span> <span class="tok-cmd">Encrypt</span>(key, plaintext []<span class="tok-key">byte</span>) ([]<span class="tok-key">byte</span>, <span class="tok-key">error</span>) {
+    block, _ := aes.<span class="tok-cmd">NewCipher</span>(key)
+    gcm, _   := cipher.<span class="tok-cmd">NewGCM</span>(block)
+    nonce    := <span class="tok-cmd">make</span>([]<span class="tok-key">byte</span>, gcm.<span class="tok-cmd">NonceSize</span>())
+    rand.<span class="tok-cmd">Read</span>(nonce)
+    <span class="tok-key">return</span> gcm.<span class="tok-cmd">Seal</span>(nonce, nonce, plaintext, <span class="tok-key">nil</span>), <span class="tok-key">nil</span>
+}</div>
+            </div>
+
+            <p class="mt-4 text-xs text-slate-500 font-mono">// simplified — see <a href="https://github.com/gtchakama/lockr" target="_blank" rel="noopener" class="text-brand hover:underline">internal/crypto</a> for the real thing.</p>
+        </div>
+    </div>
+</section>
+
+<!-- WORKFLOW EXAMPLE -->
+<section class="relative py-24 bg-gradient-to-b from-white to-slate-50/70 border-y border-slate-200/70">
+    <div class="max-w-6xl mx-auto px-6">
+        <div class="max-w-2xl reveal" data-reveal>
+            <span class="section-eyebrow">// real workflow</span>
+            <h2 class="mt-3 text-4xl md:text-5xl font-bold tracking-tight">
+                Drop into <span class="gradient-text">any project</span>.
+            </h2>
+            <p class="mt-5 text-lg text-slate-600">A typical morning, scripted.</p>
+        </div>
+
+        <div class="mt-12 grid md:grid-cols-2 gap-6">
+            <div class="reveal" data-reveal>
+                <p class="text-sm font-mono text-slate-500 mb-3">// .envrc — direnv loads work secrets when you cd into the repo</p>
+                <div class="code-light">
+<span class="tok-comment"># load every secret in the `work` group as env vars</span>
+<span class="tok-key">eval</span> <span class="tok-string">"$(lockr export work)"</span>
+
+<span class="tok-comment"># or pull a single one</span>
+<span class="tok-key">export</span> <span class="tok-key">DATABASE_URL</span>=<span class="tok-string">"$(lockr get work/db_url)"</span></div>
+            </div>
+            <div class="reveal" data-reveal>
+                <p class="text-sm font-mono text-slate-500 mb-3">// Makefile — never commit a token, never paste one</p>
+                <div class="code-light">
+<span class="tok-cmd">deploy</span>:
+<span class="tok-flag">	@</span><span class="tok-cmd">STRIPE_KEY</span>=$$(lockr get prod/stripe_key) \
+<span class="tok-flag">	</span> <span class="tok-cmd">SENTRY_DSN</span>=$$(lockr get prod/sentry_dsn) \
+<span class="tok-flag">	</span> ./scripts/deploy.sh
+
+<span class="tok-cmd">rotate</span>:
+<span class="tok-flag">	</span>lockr list <span class="tok-string">prod</span> <span class="tok-flag">|</span> <span class="tok-cmd">grep</span> <span class="tok-string">"days old"</span></div>
+            </div>
+            <div class="reveal" data-reveal>
+                <p class="text-sm font-mono text-slate-500 mb-3">// Github Actions runner setup (self-hosted)</p>
+                <div class="code-light">
+<span class="tok-comment">- name: Inject secrets from local lockr vault</span>
+  <span class="tok-key">run</span>: <span class="tok-flag">|</span>
+    <span class="tok-key">eval</span> <span class="tok-string">"$(lockr export ci)"</span>
+    <span class="tok-key">echo</span> <span class="tok-string">"NPM_TOKEN=$NPM_TOKEN"</span> <span class="tok-flag">&gt;&gt;</span> <span class="tok-string">$GITHUB_ENV</span></div>
+            </div>
+            <div class="reveal" data-reveal>
+                <p class="text-sm font-mono text-slate-500 mb-3">// shell function: copy a secret with a hotkey</p>
+                <div class="code-light">
+<span class="tok-comment"># in your ~/.zshrc</span>
+<span class="tok-cmd">cpkey</span>() {
+  lockr get <span class="tok-string">"$1"</span> <span class="tok-flag">--copy</span> <span class="tok-flag">&amp;&amp;</span> \
+    <span class="tok-key">echo</span> <span class="tok-string">"📋  $1 on clipboard (60s)"</span>
+}
+
+<span class="tok-comment"># usage:  cpkey work/stripe_key</span></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- INSTALL -->
+<section id="install" class="relative py-28">
+    <div class="absolute inset-0 grid-bg pointer-events-none opacity-60"></div>
+    <div class="glow-a" style="width:380px;height:380px;bottom:-100px;left:-100px;opacity:0.45"></div>
+
+    <div class="max-w-4xl mx-auto px-6 text-center relative">
+        <span class="section-eyebrow reveal" data-reveal>// install</span>
+        <h2 class="mt-3 text-4xl md:text-5xl font-bold tracking-tight reveal" data-reveal>
+            One command. <span class="gradient-text">No accounts.</span>
+        </h2>
+        <p class="mt-5 text-lg text-slate-600 reveal" data-reveal>Pick your platform.</p>
+
+        <div class="mt-10 grid md:grid-cols-2 gap-5 text-left">
+            <div class="card p-6 reveal" data-reveal>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-sm font-medium">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" class="text-amber-500"><path d="M11.999 1.05a4.05 4.05 0 0 1 4.04 4.05c0 .27-.03.55-.08.83a4.06 4.06 0 0 1 5.79 5.4 9.07 9.07 0 0 1 1.45 4.92c0 4.65-3.78 6.7-7.21 6.7-1.83 0-3.16-.41-3.99-.41-.83 0-2.16.41-3.99.41-3.43 0-7.21-2.05-7.21-6.7 0-1.78.51-3.49 1.45-4.92a4.06 4.06 0 0 1 5.79-5.4 4.13 4.13 0 0 1-.08-.83A4.05 4.05 0 0 1 12 1.05Z"/></svg>
+                        macOS · Homebrew
+                    </div>
+                    <button class="copy-btn text-xs text-slate-500 hover:text-ink font-mono" data-copy="brew install gtchakama/tap/lockr">copy</button>
+                </div>
+                <div class="code-light mt-4"><span class="tok-prompt">$</span> brew install gtchakama/tap/lockr</div>
+            </div>
+
+            <div class="card p-6 reveal" data-reveal>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-sm font-medium">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" class="text-slate-700"><path d="M12 2 4 5v6c0 5 3.4 9.5 8 11 4.6-1.5 8-6 8-11V5l-8-3Z"/></svg>
+                        Linux · curl + tar
+                    </div>
+                    <button class="copy-btn text-xs text-slate-500 hover:text-ink font-mono" data-copy="curl -L https://github.com/gtchakama/lockr/releases/latest/download/lockr_Linux_x86_64.tar.gz | tar xz && sudo mv lockr /usr/local/bin/">copy</button>
+                </div>
+                <div class="code-light mt-4 text-xs"><span class="tok-prompt">$</span> curl -L https://github.com/gtchakama/lockr/releases/latest/download/lockr_Linux_x86_64.tar.gz \
+    | tar xz &amp;&amp; sudo mv lockr /usr/local/bin/</div>
+                <p class="mt-2 text-xs text-slate-500 font-mono">// arm64? swap <span class="text-ink">x86_64</span> for <span class="text-ink">arm64</span></p>
+            </div>
+
+            <div class="card p-6 reveal" data-reveal>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-sm font-medium">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" class="text-cyan-600"><path d="M3 4h8v8H3V4Zm10 0h8v8h-8V4ZM3 14h8v8H3v-8Zm10 0h8v8h-8v-8Z"/></svg>
+                        Go install
+                    </div>
+                    <button class="copy-btn text-xs text-slate-500 hover:text-ink font-mono" data-copy="go install github.com/gtchakama/lockr@latest">copy</button>
+                </div>
+                <div class="code-light mt-4"><span class="tok-prompt">$</span> go install github.com/gtchakama/lockr@latest</div>
+            </div>
+
+            <div class="card p-6 reveal" data-reveal>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-sm font-medium">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" class="text-brand"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                        Windows / pre-built binaries
+                    </div>
+                    <a href="https://github.com/gtchakama/lockr/releases/latest" target="_blank" rel="noopener" class="text-xs text-brand hover:underline font-mono">releases →</a>
+                </div>
+                <div class="code-light mt-4 text-xs leading-relaxed">
+<span class="tok-comment"># Latest release — <span id="js-version-binaries">v1.0.0</span></span>
+<span class="tok-dim">lockr_Darwin_arm64.tar.gz</span>
+<span class="tok-dim">lockr_Darwin_x86_64.tar.gz</span>
+<span class="tok-dim">lockr_Linux_arm64.tar.gz</span>
+<span class="tok-dim">lockr_Linux_x86_64.tar.gz</span>
+<span class="tok-dim">lockr_Windows_x86_64.zip</span></div>
+            </div>
+        </div>
+
+        <div class="mt-10 reveal" data-reveal>
+            <p class="text-sm text-slate-500 font-mono">After install, run <code class="text-brand">lockr init</code> once and you're done.</p>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="relative py-24">
+    <div class="max-w-4xl mx-auto px-6">
+        <div class="rounded-3xl border border-slate-200 bg-white p-12 text-center relative overflow-hidden reveal" data-reveal>
+            <div class="glow-a" style="width:340px;height:340px;top:-60px;left:-60px;opacity:0.4;"></div>
+            <div class="glow-b" style="width:300px;height:300px;bottom:-60px;right:-60px;opacity:0.4;"></div>
+            <div class="relative">
+                <h2 class="text-3xl md:text-4xl font-bold tracking-tight">
+                    Stop pasting tokens into <span class="line-through text-slate-400">.env files</span> Slack threads.
+                </h2>
+                <p class="mt-4 text-lg text-slate-600">Lockr is a single 6 MB binary. It runs locally. It does one thing well.</p>
+                <div class="mt-8 flex flex-wrap justify-center gap-3">
+                    <a href="#install" class="btn-primary">Install lockr</a>
+                    <a href="https://github.com/gtchakama/lockr" target="_blank" rel="noopener" class="btn-secondary">Read the source</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="border-t border-slate-200 py-10">
+    <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-slate-500">
+        <div class="flex items-center gap-2">
+            <span class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-ink text-white font-mono text-[11px] font-bold">L</span>
+            <span>&copy; 2026 lockr · Built for developers who keep their secrets close.</span>
+        </div>
+        <div class="flex gap-6">
+            <a href="https://github.com/gtchakama/lockr" target="_blank" rel="noopener" class="hover:text-ink">GitHub</a>
+            <a href="https://github.com/gtchakama/lockr/blob/master/README.md" target="_blank" rel="noopener" class="hover:text-ink">Docs</a>
+            <a href="https://github.com/gtchakama/lockr/releases" target="_blank" rel="noopener" class="hover:text-ink">Releases</a>
+            <a href="https://github.com/gtchakama/lockr/issues" target="_blank" rel="noopener" class="hover:text-ink">Issues</a>
+        </div>
+    </div>
+</footer>
+
+<!-- ANIMATIONS -->
+<script>
+    /* ---------- Live version from GitHub releases ---------- */
+    /* Falls back silently to the hardcoded version if the request fails
+       (rate-limit, offline, API outage). Cached by the browser per request. */
+    fetch('https://api.github.com/repos/gtchakama/lockr/releases/latest', {
+        headers: { 'Accept': 'application/vnd.github+json' }
+    })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+            const tag = data && data.tag_name;
+            if (!tag) return;
+            const pill = document.getElementById('js-version-pill');
+            const bin  = document.getElementById('js-version-binaries');
+            if (pill) pill.textContent = tag;
+            if (bin)  bin.textContent  = tag;
+        })
+        .catch(() => { /* keep fallback */ });
+
+    /* ---------- Nav scrolled state ---------- */
+    const nav = document.getElementById('nav');
+    const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 8);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+
+    /* ---------- GSAP setup ---------- */
+    gsap.registerPlugin(ScrollTrigger);
+
+    /* Underline reveal via CSS variable (animates the ::after pseudo) */
+    const ulStyle = document.createElement('style');
+    ulStyle.textContent = `.underline-grad::after { transform: scaleX(var(--ul-scale, 0)); transition: transform 0.7s cubic-bezier(.2,.7,.2,1); }`;
+    document.head.appendChild(ulStyle);
+
+    /* Reset hero .reveal elements explicitly so the timeline can animate them in */
+    gsap.set(['#hero-pill', '#hero-sub', '#hero-ctas', '#hero-meta', '#hero-terminal-wrap'], {
+        opacity: 0, y: 24
+    });
+    gsap.set('#hero-terminal-wrap', { scale: 0.98 });
+    gsap.set('.chip', { opacity: 0, y: 20, scale: 0.9 });
+
+    /* Hero entrance */
+    const heroTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+    heroTl
+        .to('#hero-pill', { opacity: 1, y: 0, duration: 0.6 })
+        .from('#hero-title .block:nth-child(1)', { opacity: 0, y: 28, duration: 0.7 }, '-=0.2')
+        .from('#hero-title .block:nth-child(2)', { opacity: 0, y: 28, duration: 0.7 }, '-=0.45')
+        .to('#hero-sub', { opacity: 1, y: 0, duration: 0.6 }, '-=0.4')
+        .to('#hero-ctas', { opacity: 1, y: 0, duration: 0.6 }, '-=0.4')
+        .to('#hero-meta', { opacity: 1, y: 0, duration: 0.5 }, '-=0.4')
+        .to('#hero-terminal-wrap', { opacity: 1, y: 0, scale: 1, duration: 0.9, ease: 'power4.out' }, '-=0.3')
+        .to('.chip', { opacity: 1, y: 0, scale: 1, stagger: 0.12, duration: 0.5, ease: 'back.out(1.6)' }, '-=0.5')
+        .add(() => document.documentElement.style.setProperty('--ul-scale', 1), '-=0.7');
+
+    /* ---------- Reveal-on-scroll ---------- */
+    document.querySelectorAll('[data-reveal]').forEach(el => {
+        gsap.to(el, {
+            opacity: 1,
+            y: 0,
+            duration: 0.8,
+            ease: 'power3.out',
+            scrollTrigger: {
+                trigger: el,
+                start: 'top 85%',
+                toggleActions: 'play none none reverse'
+            }
+        });
+    });
+
+    /* Stagger groups */
+    document.querySelectorAll('[data-stagger]').forEach(group => {
+        gsap.to(group.children, {
+            opacity: 1,
+            y: 0,
+            duration: 0.7,
+            ease: 'power3.out',
+            stagger: 0.08,
+            scrollTrigger: {
+                trigger: group,
+                start: 'top 80%',
+                toggleActions: 'play none none reverse'
+            }
+        });
+    });
+
+    /* Initial states for any not-yet-tagged reveals — those .reveal not having data-reveal */
+    gsap.utils.toArray('.reveal:not([data-reveal])').forEach(el => {
+        if (el.id && el.id.startsWith('hero-')) return; // hero handled by timeline
+        if (el.id === 'hero-terminal-wrap') return;
+        gsap.to(el, {
+            opacity: 1,
+            y: 0,
+            duration: 0.8,
+            ease: 'power3.out',
+            scrollTrigger: {
+                trigger: el,
+                start: 'top 85%',
+                toggleActions: 'play none none reverse'
+            }
+        });
+    });
+
+    /* ---------- Hero terminal: typewriter ---------- */
+    const heroTerm = document.getElementById('hero-terminal');
+    const lines = [
+        { html: `<span class="tok-prompt">➜</span>  <span class="tok-path">~</span>  <span class="tok-cmd">lockr</span> set <span class="tok-arg">work/stripe_key</span> <span class="tok-string">sk_live_RT7d9...x4</span>`, delay: 600 },
+        { html: `<span class="tok-ok">✓</span> Saved <span class="tok-key">stripe_key</span> to group <span class="tok-key">work</span>\n`, delay: 250, instant: true },
+        { html: `<span class="tok-prompt">➜</span>  <span class="tok-path">~</span>  <span class="tok-cmd">lockr</span> get <span class="tok-arg">work/stripe_key</span> <span class="tok-flag">--copy</span>`, delay: 500 },
+        { html: `<span class="tok-ok">✓</span> Copied to clipboard. <span class="tok-dim">(value not printed)</span>\n`, delay: 250, instant: true },
+        { html: `<span class="tok-prompt">➜</span>  <span class="tok-path">~</span>  <span class="tok-cmd">eval</span> $(<span class="tok-cmd">lockr</span> export <span class="tok-arg">work</span>)`, delay: 500 },
+        { html: `<span class="tok-key">STRIPE_KEY</span>=<span class="tok-string">sk_live_RT7d9...x4</span>\n<span class="tok-key">AWS_ACCESS_KEY</span>=<span class="tok-string">AKIA...QY</span>\n`, delay: 200, instant: true },
+        { html: `<span class="tok-prompt">➜</span>  <span class="tok-path">~</span>  <span class="tok-comment"># done. nothing left the laptop.</span>`, delay: 400 }
+    ];
+
+    function typeLine(line) {
+        return new Promise(resolve => {
+            const span = document.createElement('span');
+            heroTerm.appendChild(span);
+            if (line.instant) {
+                span.innerHTML = line.html + '\n';
+                resolve();
+                return;
+            }
+            // Type character-by-character but render HTML in chunks so tags stay valid.
+            // Strategy: split by HTML tags + text, type only text chars.
+            const tmp = document.createElement('div');
+            tmp.innerHTML = line.html;
+            const nodes = Array.from(tmp.childNodes);
+            let nodeIndex = 0;
+
+            function nextNode() {
+                if (nodeIndex >= nodes.length) {
+                    span.appendChild(document.createTextNode('\n'));
+                    resolve();
+                    return;
+                }
+                const node = nodes[nodeIndex++];
+                if (node.nodeType === Node.TEXT_NODE) {
+                    typeText(node.textContent, span, nextNode);
+                } else {
+                    const clone = node.cloneNode(false);
+                    span.appendChild(clone);
+                    typeText(node.textContent, clone, nextNode);
+                }
+            }
+
+            function typeText(text, target, done) {
+                let i = 0;
+                const speed = 18;
+                function tick() {
+                    if (i < text.length) {
+                        target.appendChild(document.createTextNode(text[i++]));
+                        setTimeout(tick, speed + Math.random() * 16);
+                    } else {
+                        done();
+                    }
+                }
+                tick();
+            }
+
+            nextNode();
+        });
+    }
+
+    async function runHeroTerminal() {
+        // Wait for hero entrance
+        await new Promise(r => setTimeout(r, 1200));
+        heroTerm.classList.add('caret');
+        for (const line of lines) {
+            await new Promise(r => setTimeout(r, line.delay));
+            await typeLine(line);
+        }
+        heroTerm.classList.remove('caret');
+    }
+    runHeroTerminal();
+
+    /* ---------- Tabs ---------- */
+    const tabBtns = document.querySelectorAll('.tab-btn[data-tab]');
+    const tabPanes = document.querySelectorAll('[data-tab-pane]');
+    const tabMetas = document.querySelectorAll('[data-tab-meta]');
+    const tabTitle = document.getElementById('tab-title');
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.dataset.tab;
+            tabBtns.forEach(b => b.classList.toggle('active', b === btn));
+            tabPanes.forEach(p => {
+                const match = p.dataset.tabPane === target;
+                p.hidden = !match;
+                if (match) {
+                    gsap.fromTo(p, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out' });
+                }
+            });
+            tabMetas.forEach(m => m.hidden = m.dataset.tabMeta !== target);
+            tabTitle.textContent = `~ — lockr ${target}`;
+        });
+    });
+
+    /* ---------- Copy buttons ---------- */
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(btn.dataset.copy);
+                const original = btn.textContent;
+                btn.textContent = 'copied ✓';
+                btn.classList.add('text-ok');
+                setTimeout(() => {
+                    btn.textContent = original;
+                    btn.classList.remove('text-ok');
+                }, 1400);
+            } catch (e) {}
+        });
+    });
+
+    /* ---------- Subtle parallax on glows ---------- */
+    document.querySelectorAll('.glow-a, .glow-b').forEach((g, i) => {
+        gsap.to(g, {
+            y: i % 2 === 0 ? 60 : -60,
+            x: i % 2 === 0 ? -30 : 40,
+            ease: 'none',
+            scrollTrigger: { trigger: 'body', start: 'top top', end: 'bottom bottom', scrub: true }
+        });
+    });
+</script>
 
 </body>
 </html>
