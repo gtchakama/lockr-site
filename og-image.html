@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Lockr — OG image (1200×630)</title>
+<!--
+  HOW TO EXPORT TO PNG (any of the below):
+
+  1) Headless Chrome / Chromium:
+     chromium --headless --screenshot=og-image.png --window-size=1200,630 \
+       file://$(pwd)/og-image.html
+
+     # macOS Chrome:
+     /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
+       --headless --screenshot=og-image.png --window-size=1200,630 \
+       file://$(pwd)/og-image.html
+
+  2) Open in Chrome, set DevTools "Device toolbar" to 1200×630, screenshot.
+
+  3) npx playwright screenshot --viewport-size=1200,630 \
+       file://$(pwd)/og-image.html og-image.png
+
+  4) Import og-image.svg into Figma if you want to tweak it visually.
+-->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        background: #FAFAF7;
+        font-family: 'Inter', system-ui, sans-serif;
+        color: #0B1220;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    .canvas {
+        position: relative;
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        background:
+            radial-gradient(circle at 80% -10%, #F8DDD6 0%, transparent 55%),
+            radial-gradient(circle at 0% 100%, #F4CAC2 0%, transparent 50%),
+            linear-gradient(180deg, #FFFFFF 0%, #FBF7F5 100%);
+    }
+
+    /* Subtle dot grid */
+    .grid {
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(rgba(11,18,32,0.06) 1.2px, transparent 1.2px);
+        background-size: 28px 28px;
+        -webkit-mask-image: radial-gradient(ellipse at 30% 40%, black 35%, transparent 80%);
+                mask-image: radial-gradient(ellipse at 30% 40%, black 35%, transparent 80%);
+    }
+
+    /* Top-left brand mark */
+    .brand {
+        position: absolute;
+        top: 56px;
+        left: 64px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+    .brand-mark {
+        width: 52px;
+        height: 52px;
+        border-radius: 12px;
+        background: #0B1220;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 26px;
+        font-family: 'JetBrains Mono', monospace;
+        letter-spacing: -0.5px;
+    }
+    .brand-name {
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+    }
+    .brand-pill {
+        margin-left: 14px;
+        padding: 6px 14px;
+        border-radius: 999px;
+        background: #FBEAE7;
+        border: 1px solid #F2CCC4;
+        color: #8B2A20;
+        font-size: 13px;
+        font-weight: 600;
+        font-family: 'JetBrains Mono', monospace;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .brand-pill::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #B23A2D;
+        box-shadow: 0 0 0 4px rgba(178,58,45,0.18);
+    }
+
+    /* Headline block */
+    .copy {
+        position: absolute;
+        top: 168px;
+        left: 64px;
+        max-width: 720px;
+    }
+    .headline {
+        font-size: 84px;
+        font-weight: 800;
+        line-height: 1.02;
+        letter-spacing: -0.035em;
+        color: #0B1220;
+    }
+    .headline .accent {
+        color: #B23A2D;
+        position: relative;
+    }
+    .headline .accent::after {
+        content: '';
+        position: absolute;
+        left: 0; right: 0; bottom: 6px;
+        height: 14px;
+        border-radius: 999px;
+        background: #F2CCC4;
+        z-index: -1;
+        opacity: 0.85;
+    }
+
+    .sub {
+        margin-top: 26px;
+        font-size: 24px;
+        font-weight: 500;
+        color: #475569;
+        line-height: 1.45;
+        max-width: 660px;
+    }
+
+    .features {
+        margin-top: 28px;
+        display: flex;
+        gap: 28px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 15px;
+        color: #334155;
+    }
+    .features span {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .features span::before {
+        content: '';
+        width: 7px;
+        height: 7px;
+        border-radius: 2px;
+        background: #B23A2D;
+    }
+
+    /* Terminal mock — bottom right */
+    .terminal {
+        position: absolute;
+        right: 56px;
+        bottom: 56px;
+        width: 460px;
+        background: #0B1220;
+        color: #E2E8F0;
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid rgba(15,23,42,0.08);
+        box-shadow:
+            0 1px 0 rgba(255,255,255,0.5) inset,
+            0 30px 60px -20px rgba(15,23,42,0.35),
+            0 18px 35px -18px rgba(178,58,45,0.28);
+        transform: rotate(-1.5deg);
+    }
+    .term-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        background: linear-gradient(180deg, #111A2E, #0B1220);
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .term-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .term-dot.r { background: #FF5F56; }
+    .term-dot.y { background: #FFBD2E; }
+    .term-dot.g { background: #27C93F; }
+    .term-title {
+        margin-left: auto;
+        margin-right: auto;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        color: #94A3B8;
+    }
+    .term-body {
+        padding: 18px 20px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 14px;
+        line-height: 1.7;
+        white-space: pre;
+    }
+    .tok-prompt  { color: #34D399; }
+    .tok-path    { color: #93C5FD; }
+    .tok-cmd     { color: #FFFFFF; font-weight: 500; }
+    .tok-arg     { color: #FCD34D; }
+    .tok-string  { color: #A5F3FC; }
+    .tok-flag    { color: #F472B6; }
+    .tok-key     { color: #C4B5FD; }
+    .tok-ok      { color: #34D399; }
+
+    /* Bottom corner URL */
+    .footer-url {
+        position: absolute;
+        bottom: 38px;
+        left: 64px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 16px;
+        color: #64748B;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .footer-url svg { width: 18px; height: 18px; }
+    .footer-url strong { color: #0B1220; font-weight: 600; }
+
+    /* Decorative chip */
+    .chip-float {
+        position: absolute;
+        top: 220px;
+        right: 88px;
+        background: white;
+        border: 1px solid rgba(15,23,42,0.08);
+        border-radius: 999px;
+        padding: 10px 18px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #334155;
+        box-shadow: 0 12px 30px -12px rgba(15,23,42,0.18);
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        transform: rotate(3deg);
+    }
+    .chip-float::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #10B981;
+    }
+</style>
+</head>
+<body>
+<div class="canvas">
+    <div class="grid"></div>
+
+    <div class="brand">
+        <div class="brand-mark">L</div>
+        <div class="brand-name">lockr</div>
+        <div class="brand-pill">v1.0 · local-first</div>
+    </div>
+
+    <div class="chip-float">AES-256-GCM</div>
+
+    <div class="copy">
+        <h1 class="headline">
+            Lock your secrets.<br>
+            Keep them <span class="accent">on your machine.</span>
+        </h1>
+        <p class="sub">
+            A fast, encrypted CLI for API keys and credentials.<br>
+            No cloud. No accounts. No sync.
+        </p>
+        <div class="features">
+            <span>AES-256-GCM</span>
+            <span>Argon2id</span>
+            <span>OS Keychain</span>
+        </div>
+    </div>
+
+    <div class="terminal">
+        <div class="term-header">
+            <span class="term-dot r"></span>
+            <span class="term-dot y"></span>
+            <span class="term-dot g"></span>
+            <span class="term-title">~ — lockr</span>
+        </div>
+        <div class="term-body"><span class="tok-prompt">➜</span> <span class="tok-path">~</span> <span class="tok-cmd">lockr</span> set <span class="tok-arg">work/stripe_key</span> <span class="tok-string">sk_live_…</span>
+<span class="tok-ok">✓</span> Saved <span class="tok-key">stripe_key</span> to <span class="tok-key">work</span>
+
+<span class="tok-prompt">➜</span> <span class="tok-path">~</span> <span class="tok-cmd">eval</span> $(<span class="tok-cmd">lockr</span> export <span class="tok-arg">work</span>)
+<span class="tok-key">STRIPE_KEY</span>=<span class="tok-string">sk_live_…</span></div>
+    </div>
+
+    <div class="footer-url">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-2.13c-3.2.69-3.87-1.54-3.87-1.54-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.69 1.24 3.35.95.1-.74.4-1.24.72-1.53-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.18-3.09-.12-.29-.51-1.46.11-3.05 0 0 .96-.31 3.15 1.18a10.94 10.94 0 0 1 5.74 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.59.23 2.76.11 3.05.74.8 1.18 1.83 1.18 3.09 0 4.42-2.69 5.4-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.55A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/></svg>
+        <span>github.com/gtchakama/<strong>lockr</strong></span>
+    </div>
+</div>
+</body>
+</html>
