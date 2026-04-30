@@ -3,14 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lockr — Local-first secrets, encrypted on your machine</title>
-    <meta name="description" content="A fast, local-first CLI for storing API keys and secrets. AES-256-GCM, Argon2id, OS keychain integration. No cloud, no accounts.">
+    <meta name="format-detection" content="telephone=no">
+
+    <!-- Primary SEO -->
+    <title>Lockr — Local-first CLI for API keys & secrets</title>
+    <meta name="description" content="A fast, encrypted CLI for storing API keys and secrets on your machine. AES-256-GCM, Argon2id, OS keychain integration. No cloud, no accounts, no sync.">
+    <meta name="author" content="George T. Chakama">
+    <meta name="theme-color" content="#B23A2D">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+    <meta name="googlebot" content="index, follow">
+
+    <!-- ⚠️ Update SITE_URL below before publishing — used by canonical, sitemap.xml and JSON-LD -->
+    <link rel="canonical" href="https://lockr.dev/">
+
+    <!-- Inline SVG favicon (no extra file required) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230B1220'/><path d='M22 18v22h22' stroke='white' stroke-width='6' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230B1220'/><path d='M22 18v22h22' stroke='white' stroke-width='6' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
+    <link rel="mask-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path d='M22 18v22h22' fill='black'/></svg>" color="#B23A2D">
+
+    <!-- Open Graph (Facebook, LinkedIn, Discord, Slack, iMessage) -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Lockr">
+    <meta property="og:url" content="https://lockr.dev/">
+    <meta property="og:title" content="Lockr — Local-first CLI for API keys & secrets">
+    <meta property="og:description" content="A fast, encrypted CLI for storing API keys and secrets on your machine. AES-256-GCM, Argon2id, OS keychain integration. No cloud, no accounts.">
+    <meta property="og:image" content="https://lockr.dev/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Lockr — local-first CLI for secrets. AES-256-GCM. Argon2id. OS keychain.">
+    <meta property="og:locale" content="en_US">
+
+    <!-- Twitter / X card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Lockr — Local-first CLI for API keys & secrets">
+    <meta name="twitter:description" content="A fast, encrypted CLI for storing API keys and secrets on your machine. AES-256-GCM, Argon2id, OS keychain integration.">
+    <meta name="twitter:image" content="https://lockr.dev/og-image.png">
+    <meta name="twitter:image:alt" content="Lockr — local-first CLI for secrets.">
+    <!-- <meta name="twitter:creator" content="@yourhandle"> -->
+
+    <!-- Performance hints -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+    <link rel="dns-prefetch" href="https://api.github.com">
+
+    <!-- Fonts & libraries -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+    <!-- Structured data: SoftwareApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "SoftwareApplication",
+          "name": "Lockr",
+          "description": "A local-first CLI for securely storing, organizing, and retrieving API keys and secrets using AES-256-GCM encryption and Argon2id key derivation.",
+          "url": "https://lockr.dev/",
+          "applicationCategory": "DeveloperApplication",
+          "applicationSubCategory": "CommandLineApplication",
+          "operatingSystem": "macOS, Linux, Windows",
+          "softwareVersion": "1.0.0",
+          "downloadUrl": "https://github.com/gtchakama/lockr/releases/latest",
+          "license": "https://github.com/gtchakama/lockr/blob/master/LICENSE",
+          "programmingLanguage": "Go",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "author": {
+            "@type": "Person",
+            "name": "George T. Chakama",
+            "url": "https://github.com/gtchakama"
+          }
+        },
+        {
+          "@type": "WebSite",
+          "name": "Lockr",
+          "url": "https://lockr.dev/",
+          "description": "Landing page for the Lockr CLI."
+        }
+      ]
+    }
+    </script>
     <script>
         tailwind.config = {
             theme: {
