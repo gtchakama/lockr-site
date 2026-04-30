@@ -134,6 +134,7 @@
         .tok-warn     { color: #FBBF24; }
         .tok-key      { color: #C4B5FD; }
         .tok-dim      { color: #94A3B8; }
+        .tok-danger   { color: #F87171; font-weight: 600; }
 
         /* Caret/typing cursor */
         .caret::after {
@@ -546,6 +547,7 @@
                     <button class="tab-btn" data-tab="export">export</button>
                     <button class="tab-btn" data-tab="delete">delete</button>
                     <button class="tab-btn" data-tab="lock">lock</button>
+                    <button class="tab-btn" data-tab="destroy">destroy</button>
                 </div>
 
                 <div class="mt-6 space-y-5">
@@ -576,6 +578,10 @@
                     <div data-tab-meta="lock" hidden>
                         <h3 class="text-xl font-semibold">Lock the vault</h3>
                         <p class="mt-2 text-slate-600">Removes the cached master password from the OS keychain. Next call prompts you again.</p>
+                    </div>
+                    <div data-tab-meta="destroy" hidden>
+                        <h3 class="text-xl font-semibold">Destroy the vault</h3>
+                        <p class="mt-2 text-slate-600">Permanently deletes <code class="font-mono text-brand">~/.lockr/</code> and clears the cached master password from the OS keychain. Pass <code class="font-mono text-brand">--force</code> / <code class="font-mono text-brand">-f</code> to skip the confirmation. <strong class="text-ink">This is irreversible.</strong></p>
                     </div>
                 </div>
             </div>
@@ -652,6 +658,23 @@
 <span class="tok-prompt">➜</span> <span class="tok-path">~</span> <span class="tok-cmd">lockr</span> get <span class="tok-arg">github_token</span>
 <span class="tok-dim">Enter master password:</span> <span class="tok-dim">••••••••••••</span>
 <span class="tok-string">ghp_91afK...Lz</span></div>
+
+                <div class="terminal-body" hidden data-tab-pane="destroy"><span class="tok-prompt">➜</span> <span class="tok-path">~</span> <span class="tok-cmd">lockr</span> destroy
+<span class="tok-danger">⚠  This will PERMANENTLY delete ~/.lockr/ and every secret inside.</span>
+<span class="tok-danger">   This action cannot be undone.</span>
+
+<span class="tok-dim">Type 'destroy' to confirm:</span> destroy
+
+<span class="tok-ok">✓</span> Removed <span class="tok-string">~/.lockr/</span>
+<span class="tok-ok">✓</span> Master password cleared from OS keychain.
+<span class="tok-ok">✓</span> Vault destroyed.
+
+<span class="tok-comment"># Skip the prompt in scripts:</span>
+<span class="tok-prompt">➜</span> <span class="tok-path">~</span> <span class="tok-cmd">lockr</span> destroy <span class="tok-flag">--force</span>
+<span class="tok-ok">✓</span> Vault destroyed.
+
+<span class="tok-prompt">➜</span> <span class="tok-path">~</span> <span class="tok-cmd">lockr</span> destroy <span class="tok-flag">-f</span>
+<span class="tok-warn">!</span> No vault found. Nothing to do.</div>
             </div>
         </div>
     </div>
